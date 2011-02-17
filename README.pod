@@ -1,0 +1,1 @@
+lib/Bash/Completion/Plugins/cpanm.pm

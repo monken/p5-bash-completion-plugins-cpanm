@@ -15,17 +15,18 @@ sub should_activate {
     return [ grep { command_in_path($_) } @commands ];
 }
 
-sub generate_bash_setup { return [qw( default )] }
+sub generate_bash_setup { return [qw( nospace default )] }
 
 sub complete {
     my ( $class, $req ) = @_;
     my $ua = LWP::UserAgent->new;
     ( my $key = $req->word ) =~ s/::?/-/g;
+    #$key =~ s/-$//g;
     my $res = $ua->request(
                           POST 'http://api.metacpan.org/dist/_search',
                           Content => '{"query":{"prefix":{"_id":"' 
                             . $key
-                            . '"}},"fields":["name"],"sort":["_id"],"size":100}'
+                            . '"}},"fields":["name"],"sort":["_id"],"size":1000}'
     );
     eval {
         my $json = decode_json( $res->content );
@@ -35,9 +36,9 @@ sub complete {
         for ( @{ $json->{hits}->{hits} } ) {
             my $dist = $_->{fields}->{name};
             $exact_match = 1 if ( $key eq $dist );
-            $key  =~ s/-.*?$/-/;
-            $dist =~ s/^$key// if ( $key =~ /-/ );
-            $dist =~ s/-/::/g;
+            $key  =~ s/^(.*)\-.*?$/$1-/;
+            $dist =~ s/^\Q$key\E// if ( $key =~ /-/ );
+            $dist =~ s/-.*?$/::/g;
             push( @candidates, $dist );
         }
         $req->candidates(@candidates)
@@ -52,15 +53,23 @@ __END__
 =head1 SYNOPSIS
 
   $ cpanm MooseX::      
-  Display all 100 possibilities? (y or n)
-  ABC                                  Error::Exception::Class
-  APIRole                              Error::Trap
-  AbstractFactory                      FSM
-  Accessors::ReadWritePrivate          FileAttribute
-  Aliases                              File_or_DB::Storage
-  Alien                                FollowPBP
-  AlwaysCoerce                         Getopt
-  App::Cmd                             Getopt::Defanged
+  Display all 121 possibilities? (y or n)
+  ABC                     Declare                 Object::
+  APIRole                 DeepAccessors           OneArgNew
+  AbstractFactory         Documenter              POE
+  Accessors::             Emulate::               Param
+  Aliases                 Error::                 Params::
+  Alien                   FSM                     Plaggerize
+  AlwaysCoerce            FileAttribute           Policy::
+  App::                   File_or_DB::            Privacy
+  Async                   FollowPBP               PrivateSetters
+  Atom                    Getopt                  Q4MLog
+  Attribute::             Getopt::                RelatedClassRoles
+  AttributeCloner         GlobRef                 Role::
+  AttributeDefaults       Has::                   Runnable
+  AttributeHelpers        HasDefaults             Runnable::
+  AttributeIndexes        IOC                     Scaffold
+  AttributeInflate        InsideOut               SemiAffordanceAccessor
   ...
 
 =head1 DESCRIPTION
@@ -78,4 +87,5 @@ or run it manually in a bash session.
 =head2 complete
 
 Queries C<http://api.metacpan.org> for distributions that match the given name.
-Limits the number of results to 100.
+Limits the number of results to 1000. Some namespaces might not appear if there
+are more than 1000 results for a given query.
